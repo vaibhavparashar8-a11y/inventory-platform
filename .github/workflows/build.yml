@@ -95,25 +95,33 @@ jobs:
           distribution: temurin
           cache: maven
 
-      # Each service migrates its own database, so each gets its own schema.
-      # A failure here means a migration is engine-specific — exactly what
-      # CLOB and bare TIMESTAMP already turned out to be.
-      - name: Run migrations against PostgreSQL
+      # Database per service, so each gets its own.
+      - name: Create a database per service
+        env:
+          PGPASSWORD: inventory
         run: |
-          ./mvnw -B --no-transfer-progress -pl services/catalog-service,services/stock-service -am \
-            -DskipTests package
           for service in catalog stock; do
-            echo "::group::$service migrations"
-            java -cp "services/$service-service/target/classes:$(./mvnw -q -pl services/$service-service dependency:build-classpath -Dmdep.outputFile=/dev/stdout -DincludeScope=runtime | tail -1)" \
-              org.flywaydb.core.Flyway \
-              -url="jdbc:postgresql://localhost:5432/inventory?currentSchema=$service" \
-              -user=inventory -password=inventory \
-              -schemas="$service" \
-              -locations="classpath:db/migration/$service" \
-              -createSchemas=true \
-              migrate
-            echo "::endgroup::"
+            psql -h localhost -U inventory -d inventory -c "CREATE DATABASE $service;"
           done
+
+      # Runs the services' own startup tests, pointed at PostgreSQL via TEST_DB_*.
+      # Deliberately the real tests rather than a bare `flyway migrate`: this proves
+      # migrations apply AND that Hibernate validates the resulting schema, on both
+      # engines. A failure here means a migration is engine-specific — which CLOB
+      # and bare TIMESTAMP already turned out to be.
+      - name: Start catalog-service against PostgreSQL
+        env:
+          TEST_DB_URL: jdbc:postgresql://localhost:5432/catalog
+          TEST_DB_USER: inventory
+          TEST_DB_PASSWORD: inventory
+        run: ./mvnw -B --no-transfer-progress -pl services/catalog-service -am test
+
+      - name: Start stock-service against PostgreSQL
+        env:
+          TEST_DB_URL: jdbc:postgresql://localhost:5432/stock
+          TEST_DB_USER: inventory
+          TEST_DB_PASSWORD: inventory
+        run: ./mvnw -B --no-transfer-progress -pl services/stock-service -am test
 
   launcher-smoke:
     name: composite launcher smoke test

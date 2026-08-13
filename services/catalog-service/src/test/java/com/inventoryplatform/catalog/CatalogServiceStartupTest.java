@@ -1,4 +1,4 @@
-package com.inventoryplatform.stock;
+package com.inventoryplatform.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,8 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.TestPropertySource;
 
+import com.inventoryplatform.catalog.api.HealthOperations;
 import com.inventoryplatform.common.client.ServiceOperationRegistry;
-import com.inventoryplatform.stock.api.HealthOperations;
 
 /**
  * Proves the service actually starts: context loads, Flyway migrates, and the schema validates
@@ -27,7 +27,7 @@ import com.inventoryplatform.stock.api.HealthOperations;
  * an installer upgrade.
  */
 @SpringBootTest(
-        classes = {StockServiceModule.class, StockServiceStartupTest.TestConfig.class},
+        classes = {CatalogServiceModule.class, CatalogServiceStartupTest.TestConfig.class},
         webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @TestPropertySource(
         properties = {
@@ -35,12 +35,12 @@ import com.inventoryplatform.stock.api.HealthOperations;
             // TEST_DB_* to point the very same test at real PostgreSQL — proving not just
             // that migrations apply, but that Hibernate validates the resulting schema on
             // both engines. Docker is absent locally, so CI is the only place this can run.
-            "spring.datasource.url=${TEST_DB_URL:jdbc:h2:mem:stock-startup;DB_CLOSE_DELAY=-1}",
+            "spring.datasource.url=${TEST_DB_URL:jdbc:h2:mem:catalog-startup;DB_CLOSE_DELAY=-1}",
             "spring.datasource.username=${TEST_DB_USER:sa}",
             "spring.datasource.password=${TEST_DB_PASSWORD:}",
             "spring.jpa.hibernate.ddl-auto=validate"
         })
-class StockServiceStartupTest {
+class CatalogServiceStartupTest {
 
     @Autowired private DataSource dataSource;
     @Autowired private HealthOperations healthOperations;
@@ -113,7 +113,7 @@ class StockServiceStartupTest {
     @Test
     @DisplayName("the service publishes its in-process operations for the launcher to route to")
     void operationsAreRegistered() {
-        assertThat(registry.find("stock.health")).isPresent();
-        assertThat(registry.find("stock.health.ready")).isPresent();
+        assertThat(registry.find("catalog.health")).isPresent();
+        assertThat(registry.find("catalog.health.ready")).isPresent();
     }
 }
