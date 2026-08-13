@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -83,14 +82,6 @@ class DesktopLauncherSmokeTest {
     }
 
     @Test
-    @Disabled(
-            "KNOWN ISSUE #6: tracing is not producing spans under Spring Boot 4. The Tracer bean "
-                    + "exists but currentSpan() yields empty ids, so no server span is being started. "
-                    + "Adding spring-boot-micrometer-tracing, spring-boot-opentelemetry, the OTel SDK "
-                    + "and an explicit ServerHttpObservationFilter did not resolve it. This is a real "
-                    + "Phase 0 gap, not a flaky test: §3 requires a trace id in every log line and it "
-                    + "currently is not there. Left failing-but-visible rather than deleted or "
-                    + "weakened to pass.")
     @DisplayName("one trace id spans the gateway and the service behind it")
     void traceIdFlowsAcrossServices() {
         Map<String, Object> catalog = healthOf("catalog");

@@ -237,6 +237,19 @@ Findings that cost time, recorded so they cost nobody else any:
 5. **`@EntityScan`/`@EnableJpaRepositories` moved packages.** Default scanning
    from the application package covers our layout.
 6. **Resilience4j** ships a distinct `-spring-boot4` artifact.
+7. **There is no auto-configuration joining OpenTelemetry to Micrometer Tracing.**
+   The worst trap of the set, because it fails silently. `spring-boot-opentelemetry`
+   provides the SDK and logging but no tracing; `spring-boot-micrometer-tracing`
+   provides `NoopTracerAutoConfiguration`. Put both on the classpath and you get a
+   **no-op tracer**: every trace id is blank, nothing warns, and the failure only
+   surfaces when someone needs a trace to diagnose a customer problem. We wire the
+   bridge explicitly in `PlatformTracingAutoConfiguration`, which also means the
+   plumbing is visible code rather than an inference from the classpath. No
+   exporter is configured — §9 requires that no telemetry leaves the machine.
+
+   *Diagnosis worth reusing:* print `tracer.getClass().getName()`. If it is
+   `io.micrometer.tracing.Tracer$1` you have the no-op; a working setup reports
+   `io.micrometer.tracing.otel.bridge.OtelTracer`.
 
 ---
 
@@ -269,7 +282,7 @@ defer something. **Never silently work around a problem.**
 | 3 | Service domain ArchUnit rules use `allowEmptyShould(true)` | Phase 0 services have no `domain` package, and ArchUnit correctly refuses to pass a rule that checked nothing | Nothing; the rules are inert until Phase 1 | Remove the relaxation when the first domain class lands — a tripwire test fails at that moment to force it. **Open question: whether to simply delete these rules until Phase 1 instead** |
 | 4 | Contract tests between services do not exist | Nothing meaningful crosses a service boundary until Phase 1 | Phase 0 DoD item is partially unmet | Add with the first real cross-service call in Phase 1 |
 | 5 | Generated OpenAPI clients are not yet wired to `ServiceClient` | The in-process binding dispatches by logical operation, while generated clients speak HTTP | Nothing yet | Reconcile in Phase 1, when the first generated client is used |
-| 6 | **Tracing produces no spans.** `Tracer` exists but `currentSpan()` yields empty ids | Spring Boot 4 modularised observability auto-configuration; adding `spring-boot-micrometer-tracing`, `spring-boot-opentelemetry`, the OTel SDK and an explicit `ServerHttpObservationFilter` did not resolve it | **A Phase 0 Definition-of-Done item.** §3 requires a trace id in every log line and across every service; it is currently blank. Support diagnosis depends on it, and the `supportId` in every error response is therefore empty | Investigate the Boot 4 observability wiring properly — likely a missing bridge between `ObservationRegistry` and the OTel `SdkTracerProvider`. The smoke test asserting it is `@Disabled` with this issue number, deliberately visible rather than deleted |
+| ~~6~~ | ~~Tracing produces no spans~~ | **RESOLVED.** Cause: Boot 4.1 ships no auto-configuration joining OpenTelemetry to Micrometer Tracing. See §12.7 | — | Fixed by explicit wiring in `PlatformTracingAutoConfiguration`; the smoke test asserting it is enabled again |
 
 ---
 

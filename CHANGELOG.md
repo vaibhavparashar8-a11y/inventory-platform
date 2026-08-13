@@ -29,6 +29,11 @@ tag.
   stock increase cannot violate the invariant, so the reservation was ceremony
 
 ### Fixed
+- Tracing produced no spans: Boot 4.1 has no auto-configuration joining
+  OpenTelemetry to Micrometer Tracing, so the classpath silently yielded a no-op
+  tracer and every trace id was blank. Bridge now wired explicitly
+- Gateway could not start outside the launcher (no `ServiceClient` bean), which
+  quietly made "one codebase, two deployment shapes" false for cloud mode
 - `mvnw` executable bit missing on Windows checkouts, which broke Linux CI
 - CRLF line endings failing the formatting gate; normalised via `.gitattributes`
 - Migration portability: `CLOB` does not exist in PostgreSQL; bare `TIMESTAMP`
