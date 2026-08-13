@@ -45,6 +45,23 @@
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-tracing-bridge-otel</artifactId>
     </dependency>
+    <!--
+      The bridge alone yields a NO-OP tracer: it needs an OpenTelemetry SDK behind
+      it and web instrumentation in front of it to produce real spans. Boot 4 ships
+      both as separate auto-configuration modules.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-opentelemetry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-micrometer-observation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>

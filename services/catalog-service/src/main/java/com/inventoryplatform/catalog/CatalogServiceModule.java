@@ -21,6 +21,19 @@ import com.inventoryplatform.common.client.ServiceOperationRegistry;
 @SpringBootApplication
 public class CatalogServiceModule {
 
+    /**
+     * Standalone entry point for cloud mode.
+     *
+     * <p>The config name is set explicitly because every module ships its own YAML and, in the
+     * co-located build, they all sit on one classpath — a plain { application.yml} in each
+     * would resolve to whichever jar happened to load first.
+     */
+    public static void main(String[] args) {
+        new org.springframework.boot.builder.SpringApplicationBuilder(CatalogServiceModule.class)
+                .properties("spring.config.name=catalog")
+                .run(args);
+    }
+
     /** The service's name in routing and in problem documents. */
     public static final String SERVICE_NAME = "catalog-service";
 

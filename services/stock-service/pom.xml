@@ -26,6 +26,16 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <!--
+      Boot 4 splits observability auto-configuration out too: the tracing bridge
+      on the classpath does not produce a Tracer bean on its own. Without this,
+      every trace id is silently null and §3's "a trace id in every log line"
+      quietly does not hold.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-micrometer-tracing</artifactId>
+    </dependency>
+    <!--
       Spring Boot 4 splits auto-configuration into per-technology modules: without
       this, flyway-core is on the classpath but never auto-configured, and
       migrations silently do not run. Found by the startup test, which is exactly

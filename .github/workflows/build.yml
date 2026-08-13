@@ -62,16 +62,82 @@ jobs:
       - name: Lint contracts
         run: npx --yes @stoplight/spectral-cli@latest lint "contracts/*.yaml" --ruleset .spectral.yaml
 
+  postgres-migrations:
+    name: migrations against real postgresql
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Docker is not available on the dev machine, so this job is not a
+    # convenience — it is the ONLY proof that the migrations are portable
+    # between the local engine (H2) and the cloud one. See ADR 0002.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: inventory
+          POSTGRES_PASSWORD: inventory
+          POSTGRES_DB: inventory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # Each service migrates its own database, so each gets its own schema.
+      # A failure here means a migration is engine-specific — exactly what
+      # CLOB and bare TIMESTAMP already turned out to be.
+      - name: Run migrations against PostgreSQL
+        run: |
+          ./mvnw -B --no-transfer-progress -pl services/catalog-service,services/stock-service -am \
+            -DskipTests package
+          for service in catalog stock; do
+            echo "::group::$service migrations"
+            java -cp "services/$service-service/target/classes:$(./mvnw -q -pl services/$service-service dependency:build-classpath -Dmdep.outputFile=/dev/stdout -DincludeScope=runtime | tail -1)" \
+              org.flywaydb.core.Flyway \
+              -url="jdbc:postgresql://localhost:5432/inventory?currentSchema=$service" \
+              -user=inventory -password=inventory \
+              -schemas="$service" \
+              -locations="classpath:db/migration/$service" \
+              -createSchemas=true \
+              migrate
+            echo "::endgroup::"
+          done
+
+  launcher-smoke:
+    name: composite launcher smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # BUILD_PROMPT.md §3: the desktop deployment story must never silently rot.
+    # If this breaks, the product has no delivery mechanism — and discovering
+    # that during Phase 7 packaging would be far too late.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Start every service in one JVM and drive it over HTTP
+        run: ./mvnw -B --no-transfer-progress -pl launcher -am verify
+
   # ---------------------------------------------------------------------------
-  # Jobs added as their subject lands, so no job ever passes vacuously:
-  #
-  #   postgres-migrations  — with the first Flyway migration (service skeletons).
-  #                          Docker is not available on the dev machine, so a real
-  #                          PostgreSQL service container here is the ONLY proof
-  #                          that migrations are portable. See BUILD_PROMPT.md §5.
-  #   launcher-smoke       — with the composite launcher. Must run on every PR
-  #                          thereafter: §3 is explicit that the deployment story
-  #                          must never silently rot.
-  #   openapi-breaking     — once a spec has been released and can be broken.
-  #                          Meaningless before there is a baseline to compare to.
+  # Still to come:
+  #   openapi-breaking — once a spec has been released and can be broken.
+  #                      Meaningless before there is a baseline to compare to.
   # ---------------------------------------------------------------------------

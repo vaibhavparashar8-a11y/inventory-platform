@@ -1,0 +1,11 @@
+# Parent context configuration. Deliberately thin: the parent owns shared
+# infrastructure only, and each service loads its own config by name.
+
+spring:
+  main:
+    banner-mode: off
+
+# Bound to loopback only (BUILD_PROMPT.md §10). The gateway is the sole port.
+server:
+  address: 127.0.0.1
+  port: 8080
