@@ -34,6 +34,11 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-json</artifactId>
     </dependency>
+    <!-- TransactionTemplate: the in-process transport must start a NEW transaction. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+    </dependency>
 
     <!-- Tracing is day one, not retrofitted (BUILD_PROMPT.md §3). -->
     <dependency>
