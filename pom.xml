@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Root aggregator for the Multi-Vertical Inventory & Sales Platform.
+
+    Every third-party version is pinned here and nowhere else. Child modules
+    declare dependencies without versions. See docs/adr/ for the decisions
+    behind the framework choices.
+  -->
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.0</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.inventoryplatform</groupId>
+  <artifactId>inventory-platform</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>inventory-platform</name>
+  <description>Local-first inventory, sales and profitability platform for small retailers</description>
+
+  <modules>
+    <module>platform-common</module>
+    <module>services/catalog-service</module>
+    <module>services/stock-service</module>
+    <module>services/gateway</module>
+    <module>launcher</module>
+  </modules>
+
+  <properties>
+    <java.version>21</java.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Versions verified against Maven Central at Phase 0. Do not float. -->
+    <testcontainers.version>2.0.5</testcontainers.version>
+    <archunit.version>1.4.1</archunit.version>
+    <resilience4j.version>2.4.0</resilience4j.version>
+    <spotless.version>3.9.0</spotless.version>
+    <enforcer.version>3.5.0</enforcer.version>
+
+    <!-- Minimum tooling. The wrapper pins Maven; this fails fast if bypassed. -->
+    <min.maven.version>3.9.0</min.maven.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!--
+        Spring Boot 4's curated BOM no longer manages Testcontainers, so it is
+        imported explicitly. Testcontainers 2.x also renamed its artifacts
+        (postgresql -> testcontainers-postgresql).
+      -->
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit-junit5</artifactId>
+        <version>${archunit.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Boot 4 build of Resilience4j; the -spring-boot3 artifact is for Boot 3. -->
+      <dependency>
+        <groupId>io.github.resilience4j</groupId>
+        <artifactId>resilience4j-spring-boot4</artifactId>
+        <version>${resilience4j.version}</version>
+      </dependency>
+
+      <!-- Internal modules -->
+      <dependency>
+        <groupId>com.inventoryplatform</groupId>
+        <artifactId>platform-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <!-- Fail fast on a toolchain the build was never tested against. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${enforcer.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-toolchain</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[${min.maven.version},)</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>[21,)</version>
+                </requireJavaVersion>
+                <!-- No version ranges anywhere: builds must be reproducible. -->
+                <banDynamicVersions>
+                  <allowSnapshots>true</allowSnapshots>
+                </banDynamicVersions>
+              </rules>
+              <fail>true</fail>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Formatting is a build gate, not advice (BUILD_PROMPT.md §9).
+        `mvn spotless:apply` fixes; `mvn verify` fails on drift.
+      -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <removeUnusedImports/>
+            <importOrder>
+              <order>java,javax,jakarta,org,com,</order>
+            </importOrder>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+            <indent><spaces>true</spaces><spacesPerTab>4</spacesPerTab></indent>
+          </java>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+            </sortPom>
+          </pom>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotless-check</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

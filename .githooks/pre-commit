@@ -1,0 +1,72 @@
+#!/bin/sh
+# Secret-scanning pre-commit hook — BUILD_PROMPT.md §12.
+#
+# This repository is PUBLIC and the product stores OAuth tokens (Phase 1) and
+# real customer data. A credential committed here is permanent: rewriting
+# history does not un-publish it. This hook is a safety net, not a substitute
+# for care.
+#
+# Enabled by `git config core.hooksPath .githooks` (done in Phase 0 setup).
+# Emergency bypass, only when you are certain: ALLOW_SECRET=1 git commit ...
+
+if [ "$ALLOW_SECRET" = "1" ]; then
+    echo "pre-commit: secret scan BYPASSED via ALLOW_SECRET=1" >&2
+    exit 0
+fi
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+findings=""
+
+# --- 1. Files that must never be committed, even if force-added ---
+for f in $staged; do
+    case "$f" in
+        data/*|*/data/*|*.db|*.mv.db|*.sqlite|backups/*|.env|*.pem|*.p12|*.jks|*.keystore)
+            findings="${findings}BLOCKED: $f — customer data or key material must never be committed.\n"
+            ;;
+    esac
+done
+
+# --- 2. Credential-shaped literals in staged content ---
+#
+# Interpolations are excluded: "${TOKEN}", "$(vault read)", process.env.X,
+# System.getenv("X") and "{{ secret }}" are references, not secrets. A
+# hardcoded credential is a literal, so that is what we look for.
+scan_file() {
+    file="$1"
+    content=$(git show ":$file" 2>/dev/null) || return 0
+
+    echo "$content" \
+        | grep -nEi \
+            -e 'gh[pousr]_[A-Za-z0-9]{30,}' \
+            -e 'AKIA[0-9A-Z]{16}' \
+            -e '-----BEGIN( [A-Z]+)? PRIVATE KEY-----' \
+            -e '(access_token|refresh_token|client_secret|api[_-]?key|password)["'"'"' ]*[:=]["'"'"' ]*[A-Za-z0-9/+_-]{12,}' \
+        | grep -vE '\$\{|\$\(|\{\{|process\.env|System\.getenv|getProperty|<%|%[A-Z_]+%' \
+        | head -3
+}
+
+for f in $staged; do
+    # This hook and the build brief legitimately describe these patterns.
+    case "$f" in
+        .githooks/pre-commit|BUILD_PROMPT.md|CLAUDE.md) continue ;;
+    esac
+    [ -f "$f" ] || continue
+
+    hits=$(scan_file "$f")
+    if [ -n "$hits" ]; then
+        findings="${findings}BLOCKED: $f — credential-shaped literal:\n$(echo "$hits" | sed 's/^/    /')\n"
+    fi
+done
+
+if [ -n "$findings" ]; then
+    printf "%b" "$findings" >&2
+    echo "" >&2
+    echo "pre-commit: commit rejected by secret scan." >&2
+    echo "If this is a placeholder or fixture, reference an env var instead," >&2
+    echo "or bypass deliberately with ALLOW_SECRET=1." >&2
+    exit 1
+fi
+
+exit 0

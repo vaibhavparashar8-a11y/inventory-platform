@@ -1,0 +1,56 @@
+# --- Build output ---
+target/
+build/
+dist/
+out/
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# --- Node / frontend ---
+node_modules/
+web-ui/dist/
+.vite/
+*.tsbuildinfo
+
+# --- Customer data: NEVER commit (BUILD_PROMPT.md §12) ---
+data/
+*.db
+*.mv.db
+*.trace.db
+*.sqlite
+backups/
+diagnostics/
+
+# --- Secrets and credentials: NEVER commit ---
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.jks
+*.keystore
+secrets/
+**/application-local.yml
+**/application-local.yaml
+**/application-local.properties
+credentials.json
+*-credentials.*
+
+# --- Real marketplace reports and customer files ---
+samples/real/
+*.xlsx
+*.xls
+!contracts/**/*.xlsx
+!docs/samples/anonymised/*.xlsx
+
+# --- Logs ---
+logs/
+*.log
+
+# --- IDE / OS ---
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
