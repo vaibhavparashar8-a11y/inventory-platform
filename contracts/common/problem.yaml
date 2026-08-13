@@ -1,0 +1,84 @@
+# Shared error representation (RFC 9457), referenced by every service spec.
+#
+# The `type` URI is the contract: the frontend switches on it, so a value may be
+# added but never renamed or repurposed. `title` and `detail` are human-facing
+# and may change freely.
+
+components:
+  schemas:
+    ProblemDetail:
+      type: object
+      description: >
+        An RFC 9457 problem document. Every error response in this platform uses
+        this shape — there is no second error format.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Stable, machine-readable problem identifier.
+          examples:
+            - 'urn:problem:insufficient-stock'
+            - 'urn:problem:reservation-expired'
+            - 'urn:problem:idempotency-key-reused'
+        title:
+          type: string
+          description: Short human-readable summary.
+          examples: ['Conflict']
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code, repeated here for clients that only read the body.
+          examples: [409]
+        detail:
+          type: string
+          description: >
+            Plain-language explanation safe to show a non-technical user. Never a
+            stack trace.
+          examples: ['Only 2 units are available.']
+        instance:
+          type: string
+          format: uri
+          description: Identifies the specific occurrence.
+        supportId:
+          type: string
+          description: >
+            The trace id of the failing request. A customer can read this aloud to
+            support, who can then find the exact request in the logs.
+          examples: ['4bf92f3577b34da6a3ce929d0e0e4736']
+
+    HealthStatus:
+      type: object
+      description: >
+        Liveness and readiness are distinct: the launcher waits for readiness
+        before opening the browser, and a service that is up but not yet migrated
+        must not claim to be ready.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN]
+        service:
+          type: string
+          examples: ['stock-service']
+
+  responses:
+    Problem:
+      description: The request failed. The body explains why, in the RFC 9457 shape.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >
+        Caller-generated key making the operation safe to retry. Required on every
+        state-changing call. Replaying a key returns the original response; reusing
+        one with a different body is rejected with 422.
+      schema:
+        type: string
+        maxLength: 128

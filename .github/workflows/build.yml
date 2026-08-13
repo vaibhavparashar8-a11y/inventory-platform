@@ -44,6 +44,24 @@ jobs:
           path: '**/target/surefire-reports/**'
           retention-days: 7
 
+  openapi-lint:
+    name: lint openapi contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # The specs are what clients are generated from, so a spec that merely
+      # parses is not enough — it has to be unambiguous. Warnings are visible but
+      # only errors fail the build.
+      - name: Lint contracts
+        run: npx --yes @stoplight/spectral-cli@latest lint "contracts/*.yaml" --ruleset .spectral.yaml
+
   # ---------------------------------------------------------------------------
   # Jobs added as their subject lands, so no job ever passes vacuously:
   #
@@ -54,5 +72,6 @@ jobs:
   #   launcher-smoke       — with the composite launcher. Must run on every PR
   #                          thereafter: §3 is explicit that the deployment story
   #                          must never silently rot.
-  #   openapi-lint         — with contracts/, including a breaking-change check.
+  #   openapi-breaking     — once a spec has been released and can be broken.
+  #                          Meaningless before there is a baseline to compare to.
   # ---------------------------------------------------------------------------
