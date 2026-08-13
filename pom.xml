@@ -47,7 +47,7 @@
     <archunit.version>1.4.1</archunit.version>
     <resilience4j.version>2.4.0</resilience4j.version>
     <spotless.version>3.9.0</spotless.version>
-    <enforcer.version>3.5.0</enforcer.version>
+    <enforcer.version>3.6.3</enforcer.version>
 
     <!-- Minimum tooling. The wrapper pins Maven; this fails fast if bypassed. -->
     <min.maven.version>3.9.0</min.maven.version>
