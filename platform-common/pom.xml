@@ -25,6 +25,15 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
+    <!--
+      Explicit: Spring Boot 4 no longer pulls JSON support in transitively via
+      starter-web. Idempotency fingerprinting and the in-process transport both
+      depend on Jackson directly, so it is a first-class dependency here.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-json</artifactId>
+    </dependency>
 
     <!-- Tracing is day one, not retrofitted (BUILD_PROMPT.md §3). -->
     <dependency>
