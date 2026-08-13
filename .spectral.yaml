@@ -1,0 +1,31 @@
+# OpenAPI linting. The specs are the contract clients are generated from, so a
+# spec that is merely parseable is not good enough — it has to be unambiguous.
+
+extends: ['spectral:oas']
+
+rules:
+  # Every operation needs an operationId: the generated client names its methods
+  # from it, so a missing one produces an unusable client.
+  operation-operationId: error
+  operation-operationId-unique: error
+
+  # Descriptions are how the next developer knows what a field means. This is the
+  # handover document as much as DEVELOPER_GUIDE.md is.
+  operation-description: warn
+  operation-tags: error
+
+  # Contract-first only works if responses are fully specified.
+  operation-success-response: error
+
+  # Servers must be declared, or generated clients guess at base paths.
+  oas3-api-servers: error
+
+  # Relaxed deliberately: info.contact and licence are meaningless for an
+  # internal spec in a product that has not chosen a licence yet.
+  info-contact: off
+  info-license: off
+  license-url: off
+
+  # Example values are useful but not worth failing a build over at Phase 0.
+  oas3-valid-media-example: warn
+  oas3-valid-schema-example: warn

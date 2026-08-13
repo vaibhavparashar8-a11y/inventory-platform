@@ -1,0 +1,73 @@
+openapi: 3.1.0
+
+info:
+  title: stock-service
+  version: 0.1.0
+  description: |
+    The stock ledger. **Sole writer of stock quantity in the entire platform.**
+
+    No other service has a stock table, a quantity column, or any way to change
+    on-hand. "Stock never goes negative" holds at every instant, not eventually,
+    because the check and the write happen in one local transaction here.
+
+    Consequently there are no sagas and no compensating transactions for stock.
+    Multi-step operations use the two-phase reservation protocol below.
+
+    Phase 0 defines only health. Reservations, movements and balances are
+    specified here in Phase 1, before they are implemented.
+
+servers:
+  - url: /api/v1
+    description: Through the gateway, the only port the browser talks to.
+
+tags:
+  - name: health
+    description: Liveness and readiness.
+  - name: reservations
+    description: |
+      Two-phase holds on quantity (Phase 1).
+
+      reserve → the caller commits its own record → commit. If the caller dies,
+      the TTL expires and the quantity returns on its own. This is why there is
+      no manual reconciliation screen: an orphaned reservation self-heals.
+  - name: movements
+    description: |
+      Append-only ledger entries (Phase 1).
+
+      Stock *increases* cannot violate the invariant, so they post directly here
+      with an idempotency key rather than going through a reservation.
+
+paths:
+  /stock/health:
+    get:
+      tags: [health]
+      summary: Liveness
+      description: >
+        The process is up. Deliberately shallow: it must not touch the database, or
+        a slow query would look like a dead process and trigger a needless restart.
+      operationId: getHealth
+      responses:
+        '200':
+          description: The service is running.
+          content:
+            application/json:
+              schema:
+                $ref: './common/problem.yaml#/components/schemas/HealthStatus'
+
+  /stock/health/ready:
+    get:
+      tags: [health]
+      summary: Readiness
+      description: >
+        Ready means migrations have run and the database is reachable. The
+        launcher waits for this before opening the browser.
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Ready to serve traffic.
+          content:
+            application/json:
+              schema:
+                $ref: './common/problem.yaml#/components/schemas/HealthStatus'
+        '503':
+          $ref: './common/problem.yaml#/components/responses/Problem'

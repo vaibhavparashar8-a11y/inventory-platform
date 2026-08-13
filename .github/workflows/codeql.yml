@@ -1,0 +1,46 @@
+name: codeql
+
+# Static security analysis. BUILD_PROMPT.md §12 asks for a dependency scan on
+# every PR; CodeQL covers the code side and Dependabot (see dependabot.yml) the
+# dependency side. Neither needs an API key, which matters for a build that must
+# keep working without anyone maintaining credentials.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Vulnerabilities are found after code is written, so a weekly sweep catches
+    # what the PR-time scan could not have known.
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyse:
+    name: analyse java
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          queries: security-and-quality
+
+      - name: Build
+        run: ./mvnw -B --no-transfer-progress -DskipTests package
+
+      - name: Analyse
+        uses: github/codeql-action/analyze@v3

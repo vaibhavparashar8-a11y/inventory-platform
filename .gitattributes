@@ -1,0 +1,26 @@
+# Line endings are normalised to LF in the repository.
+#
+# Development happens on Windows and CI runs on Linux, so without this the
+# Spotless gate fails on CRLF that only exists because of the checkout platform.
+# Normalising in git means the working tree can be whatever Windows wants while
+# the committed content stays consistent.
+
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF or cmd.exe mis-parses them.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts and the Maven wrapper must be LF even on Windows checkouts.
+*.sh text eol=lf
+mvnw text eol=lf
+.githooks/* text eol=lf
+
+# Binaries: never touch.
+*.jar binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.xlsx binary
+*.zip binary

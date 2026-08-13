@@ -1,0 +1,54 @@
+openapi: 3.1.0
+
+info:
+  title: returns-service
+  version: 0.1.0
+  description: |
+    Returns on two independent axes — type (courier/customer) and disposition (restock/damaged/lost) — plus write-offs.
+
+    Skeleton only: this service is built in Phase 3. The spec is written before
+    the implementation (contract-first, BUILD_PROMPT.md §3), so the endpoints
+    below are added here first and the client is generated from them.
+
+servers:
+  - url: /api/v1
+    description: Through the gateway, the only port the browser talks to.
+
+tags:
+  - name: health
+    description: Liveness and readiness.
+
+paths:
+  /returns/health:
+    get:
+      tags: [health]
+      summary: Liveness
+      description: >
+        The process is up. Deliberately shallow: it must not touch the database, or
+        a slow query would look like a dead process and trigger a needless restart.
+      operationId: getHealth
+      responses:
+        '200':
+          description: The service is running.
+          content:
+            application/json:
+              schema:
+                $ref: './common/problem.yaml#/components/schemas/HealthStatus'
+
+  /returns/health/ready:
+    get:
+      tags: [health]
+      summary: Readiness
+      description: >
+        Ready means migrations have run and the database is reachable. The
+        launcher waits for this before opening the browser.
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Ready to serve traffic.
+          content:
+            application/json:
+              schema:
+                $ref: './common/problem.yaml#/components/schemas/HealthStatus'
+        '503':
+          $ref: './common/problem.yaml#/components/responses/Problem'
