@@ -1,0 +1,58 @@
+name: build
+
+# Runs on every branch, not just PRs: the whole point of pulling CI forward is
+# that work is checked while it is being written, not once at the end.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch makes the older run irrelevant.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build, test and gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # verify runs the lot: compile, unit tests, ArchUnit, and the Spotless
+      # formatting gate. Gates are gates — nothing here is advisory.
+      - name: Build, test and check formatting
+        run: ./mvnw -B --no-transfer-progress verify
+
+      - name: Publish test report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/**'
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Jobs added as their subject lands, so no job ever passes vacuously:
+  #
+  #   postgres-migrations  — with the first Flyway migration (service skeletons).
+  #                          Docker is not available on the dev machine, so a real
+  #                          PostgreSQL service container here is the ONLY proof
+  #                          that migrations are portable. See BUILD_PROMPT.md §5.
+  #   launcher-smoke       — with the composite launcher. Must run on every PR
+  #                          thereafter: §3 is explicit that the deployment story
+  #                          must never silently rot.
+  #   openapi-lint         — with contracts/, including a breaking-change check.
+  # ---------------------------------------------------------------------------

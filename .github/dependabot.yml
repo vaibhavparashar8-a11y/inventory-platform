@@ -1,0 +1,34 @@
+version: 2
+
+# Versions are pinned deliberately and must never float (see the root pom and
+# the enforcer's banDynamicVersions rule). Dependabot is how a pin gets revisited
+# on purpose, as a reviewable PR, rather than drifting silently at build time.
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # Spring's modules move together; separate PRs per artifact would be noise.
+      spring:
+        patterns:
+          - 'org.springframework*'
+      testing:
+        patterns:
+          - 'org.junit*'
+          - 'org.mockito*'
+          - 'org.assertj*'
+          - 'com.tngtech.archunit*'
+          - 'org.testcontainers*'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
