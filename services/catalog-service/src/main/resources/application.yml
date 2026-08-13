@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: catalog-service
+
+  datasource:
+    # H2 in file mode. Chosen over SQLite because the stock invariant needs real
+    # row-level locking and SELECT ... FOR UPDATE (see docs/adr/0002).
+    # AUTO_SERVER lets the launcher's child contexts share the file safely.
+    url: jdbc:h2:file:./data/catalog;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+
+  jpa:
+    # Flyway owns the schema. Hibernate must never alter it, or the desktop and
+    # the migration history would silently disagree.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+# A trace id must appear in every log line and flow across every service (§3).
+logging:
+  pattern:
+    level: '%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]'
+
+management.tracing:
+  sampling:
+    # Sample everything: this is one shopkeeper's PC, not a high-volume service,
+    # and a missing trace on the one failing request is what costs support hours.
+    probability: 1.0

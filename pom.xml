@@ -31,6 +31,8 @@
   -->
   <modules>
     <module>platform-common</module>
+    <module>services/catalog-service</module>
+    <module>services/stock-service</module>
   </modules>
 
   <properties>
