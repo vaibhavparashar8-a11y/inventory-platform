@@ -44,7 +44,7 @@
 
     <!-- Versions verified against Maven Central at Phase 0. Do not float. -->
     <testcontainers.version>2.0.5</testcontainers.version>
-    <archunit.version>1.4.1</archunit.version>
+    <archunit.version>1.5.0</archunit.version>
     <resilience4j.version>2.4.0</resilience4j.version>
     <spotless.version>3.9.0</spotless.version>
     <enforcer.version>3.5.0</enforcer.version>
