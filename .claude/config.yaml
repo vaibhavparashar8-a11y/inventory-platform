@@ -1,0 +1,65 @@
+﻿# Claude task runner configuration.
+#
+# Read by scripts/claude-runner/Config.ps1. The parser is deliberately small:
+# two levels of nesting, scalars, and flow lists ([a, b, c]). Keep it simple.
+
+project:
+  name: ClothingInventory
+  # The phase this runner is currently driving. The runner never touches an
+  # earlier phase; Phase 0 is complete and pushed.
+  phase: 1
+  # Branch the runner works on. It is created from the baseline commit on first
+  # run and reused on every resume. The runner refuses to work on main.
+  branch: feature/1-catalog-stock
+  # Commit that Phase 1 starts from. Left empty on first run and filled in by
+  # the runner from the current HEAD, so the baseline stays recoverable.
+  baseline_commit: "b510165b3d8f4d822170bc13a329bf889676b8bc"
+
+guide:
+  # Source of truth documents, read by Claude on every start and resume.
+  # This repository has no root developer-guide.md; the guide is split across
+  # these three files. Order matters — first is primary.
+  files: [docs/DEVELOPER_GUIDE.md, BUILD_PROMPT.md, CLAUDE.md]
+  # Optional phase brief. Included only when it exists and is non-empty.
+  phase_brief: PHASE1.md
+
+state:
+  file: .claude/task-state.md
+  log: .claude/task-runner.log
+  # Keep this many rotated logs beside the active one.
+  log_history: 10
+
+retry:
+  # Added to any reset time Claude reports, because resets are not exact.
+  reset_buffer_minutes: 2
+  # Used when a usage limit is detected but no reset time can be parsed.
+  fallback_retry_minutes: 10
+  # "unlimited" or a positive integer. Counts usage-limit pauses and crashes.
+  max_retries: unlimited
+  # Transient network failures: exponential backoff between these bounds.
+  network_backoff_start_seconds: 30
+  network_backoff_max_seconds: 900
+  network_max_attempts: 6
+  # Consecutive crashes with no usage-limit signal before the runner gives up.
+  crash_max_attempts: 3
+
+claude:
+  # Model alias or full id. Empty means "whatever the CLI is configured with".
+  model: ""
+  permission_mode: acceptEdits
+  # Tool allowlist for unattended runs. Deliberately excludes any command that
+  # can discard work: no reset, no clean, no checkout of paths, no push --force.
+  allowed_tools: [Read, Write, Edit, Glob, Grep, TodoWrite, "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git add:*)", "Bash(git commit:*)", "Bash(git branch:*)", "Bash(git rev-parse:*)", "Bash(git show:*)", "Bash(./mvnw:*)", "Bash(npm:*)", "Bash(node:*)"]
+  disallowed_tools: ["Bash(git reset:*)", "Bash(git clean:*)", "Bash(git checkout:*)", "Bash(git restore:*)", "Bash(git push:*)", "Bash(git rebase:*)", "Bash(git stash:*)", WebSearch, WebFetch]
+  # Turn ceiling per attempt. The runner resumes across attempts, so a modest
+  # ceiling just means more frequent checkpoints, not lost work.
+  max_turns: 200
+  # Hard ceiling on one attempt's wall clock. 0 disables the timeout.
+  attempt_timeout_minutes: 0
+
+runner:
+  # Keep Windows awake for the duration of the run (process-scoped, does not
+  # change the power plan).
+  keep_awake: true
+  # Emit a checkpoint heartbeat into the log at this interval while Claude runs.
+  heartbeat_minutes: 5

@@ -211,6 +211,33 @@ pre-commit hook blocks it.
 Docker is not installed on the current dev machine, so Testcontainers/PostgreSQL
 runs **in CI only**. Local tests use H2.
 
+### Long unattended Claude Code runs
+
+`scripts/claude-task-runner.ps1` drives a phase across usage-limit pauses:
+checkpoint → wait for the reset Claude actually reported → start a **fresh**
+session → re-read the guide, `.claude/task-state.md` and git → continue from the
+first genuinely unfinished task. It is development tooling, not product code,
+and is excluded from the Maven build.
+
+```powershell
+scripts\claude-task.cmd -Probe          # launcher + sign-in check, one tiny turn
+scripts\claude-task.cmd -SelfTest       # limit/network/auth/build classification
+scripts\claude-task.cmd -SimulateLimit  # full pause-and-resume rehearsal, no quota
+scripts\claude-task.cmd                 # start the real run
+```
+
+VS Code: **Terminal → Run Task → Claude Long Running Task**.
+
+Two properties matter when reading its output:
+
+- The repository is the source of truth. `.claude/task-state.md` is a hint; when
+  they disagree the checkpoint is corrected, not the tree.
+- Nothing it does can discard work. It checks out branches, never paths, and
+  `reset`, `clean`, `checkout`, `restore`, `stash`, `push` and `rebase` are
+  denied to unattended sessions.
+
+Full manual: `docs/CLAUDE_TASK_RUNNER.md`.
+
 ---
 
 ## 11. Build and release
@@ -282,6 +309,9 @@ defer something. **Never silently work around a problem.**
 | 3 | Service domain ArchUnit rules use `allowEmptyShould(true)` | Phase 0 services have no `domain` package, and ArchUnit correctly refuses to pass a rule that checked nothing | Nothing; the rules are inert until Phase 1 | Remove the relaxation when the first domain class lands — a tripwire test fails at that moment to force it. **Open question: whether to simply delete these rules until Phase 1 instead** |
 | 4 | Contract tests between services do not exist | Nothing meaningful crosses a service boundary until Phase 1 | Phase 0 DoD item is partially unmet | Add with the first real cross-service call in Phase 1 |
 | 5 | Generated OpenAPI clients are not yet wired to `ServiceClient` | The in-process binding dispatches by logical operation, while generated clients speak HTTP | Nothing yet | Reconcile in Phase 1, when the first generated client is used |
+| 7 | The guide is three files, not a root `developer-guide.md` | It grew as `BUILD_PROMPT.md` (brief), this file (deep reference) and `CLAUDE.md` (working rules) | Any tool or prompt that assumes one guide file; the task runner needs an explicit list | `guide.files` in `.claude/config.yaml` is the mapping. Consolidate, or add a root pointer file, if the split starts costing more than it saves |
+| 8 | The task runner cannot verify phase completeness itself | Completeness is a judgement against the guide's Definition of Done, not something a shell script can check | Nothing; the runner keeps working until told otherwise | It reads `Phase N = COMPLETE` from `.claude/task-state.md`, which Claude writes only after verifying. A dishonest checkpoint would be believed — the guard is that `./mvnw verify` and the tests are the real gate |
+| 9 | Usage-limit detection is pattern-based | Claude Code has no stable machine-readable "you are rate limited" contract beyond the `usage limit reached\|<epoch>` form | A wording change upstream could turn a limit into a `crash`, costing bounded retries rather than a wrong result | Patterns and the classifier self-test live in `scripts/claude-runner/`. Re-run `-SelfTest` after a Claude Code upgrade |
 | ~~6~~ | ~~Tracing produces no spans~~ | **RESOLVED.** Cause: Boot 4.1 ships no auto-configuration joining OpenTelemetry to Micrometer Tracing. See §12.7 | — | Fixed by explicit wiring in `PlatformTracingAutoConfiguration`; the smoke test asserting it is enabled again |
 
 ---
