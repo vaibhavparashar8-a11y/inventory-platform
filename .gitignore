@@ -50,7 +50,10 @@ logs/
 # --- IDE / OS ---
 .idea/
 *.iml
-.vscode/
+# Excluded per-file, not as a directory: git will not descend into an ignored
+# directory, so a negation under `.vscode/` would never take effect.
+.vscode/*
 !.vscode/extensions.json
+!.vscode/tasks.json
 .DS_Store
 Thumbs.db
