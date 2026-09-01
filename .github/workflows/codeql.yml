@@ -34,7 +34,7 @@ jobs:
           cache: maven
 
       - name: Initialise CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
           queries: security-and-quality
@@ -43,4 +43,4 @@ jobs:
         run: ./mvnw -B --no-transfer-progress -DskipTests package
 
       - name: Analyse
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
